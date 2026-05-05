@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LockWork — Managed Freelance Escrow Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="topupModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('topupModal')">✕</button>
+    <h3>Add Funds</h3>
+    <div class="topup-grid">
+      <button class="topup-btn" onclick="topUp(500)">$500</button>
+      <button class="topup-btn" onclick="topUp(1000)">$1,000</button>
+      <button class="topup-btn" onclick="topUp(2500)">$2,500</button>
+      <button class="topup-btn" onclick="topUp(5000)">$5,000</button>
+      <button class="topup-btn" onclick="topUp(10000)">$10,000</button>
+      <button class="topup-btn" onclick="topUp(25000)">$25,000</button>
+    </div>
+    <div id="topupAlert"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="submitModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('submitModal')">✕</button>
+    <h3>Submit Milestone Work</h3>
+    <div class="form-group"><label>Milestone</label><input type="text" id="submitMsTitle" readonly></div>
+    <div class="form-group"><label>Note to Client</label><textarea id="submitNote" placeholder="Describe what you completed..."></textarea></div>
+    <div class="form-group">
+      <label>Upload File (optional · max 5MB)</label>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"
+           ondragover="event.preventDefault();this.classList.add('dragover')"
+           ondragleave="this.classList.remove('dragover')"
+           ondrop="handleDrop(event)">
+        📎 Click or drag & drop
+      </div>
+      <input type="file" id="fileInput" style="display:none" onchange="handleFileSelect(this)">
+      <div id="filePreview" style="display:none" class="file-preview">
+        <span>📄</span>
+        <div><div id="fileName"></div><div id="fileSize" class="text-muted"></div></div>
+        <button class="btn btn-outline btn-sm" onclick="clearFile()" style="margin-left:auto">✕</button>
+      </div>
+    </div>
+    <div id="submitAlert"></div>
+    <button class="btn btn-amber w-full" onclick="doSubmitMilestone()">Submit Work →</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="disputeModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('disputeModal')">✕</button>
+    <h3>⚖️ Raise a Dispute</h3>
+    <p class="text-muted" style="font-size:0.8rem;margin-bottom:16px;">Describe the issue clearly. Platform will mediate within 48 hours.</p>
+    <div class="form-group"><label>Reason for Dispute</label><textarea id="disputeReason" placeholder="e.g. Freelancer has been inactive for 3 weeks despite multiple messages..." rows="4"></textarea></div>
+    <div id="disputeAlert"></div>
+    <button class="btn btn-red w-full" onclick="doRaiseDispute()">Raise Dispute</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="skillModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('skillModal')">✕</button>
+    <h3>🎯 Skill Test</h3>
+    <p class="text-muted" style="font-size:0.8rem;margin-bottom:16px;">Score 70+ to earn the skill badge. Pass rate: 70%.</p>
+    <div id="skillTestContent"></div>
+    <div id="skillAlert"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="verifyModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('verifyModal')">✕</button>
+    <h3>🪪 ID Verification</h3>
+    <p class="text-muted" style="font-size:0.8rem;margin-bottom:16px;">Upload a government ID to get verified. Verified freelancers get 3x more projects.</p>
+    <div class="upload-zone" id="idUploadZone" onclick="document.getElementById('idInput').click()">
+      📎 Upload ID Document (passport, national ID, driver's license)
+    </div>
+    <input type="file" id="idInput" style="display:none" accept="image/*,.pdf" onchange="handleIdUpload(this)">
+    <div id="verifyAlert" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="inner">
+    <div class="logo" onclick="showPage('home')">Lock<span>Work</span></div>
+    <div class="nav-links">
+      <a onclick="showPage('home')">Home</a>
+      <a onclick="showPage('how')">How It Works</a>
+      <a onclick="showPage('freelancers')">Find Freelancers</a>
+      <span id="notifBell" style="display:none;cursor:pointer;position:relative;" onclick="showPage('dashboard');switchTab('notifications')">
+        🔔 <span id="notifCount" class="notif-badge" style="display:none;"></span>
+      </span>
+      <span id="authNav"></span>
+    </div>
+  </div>
+</nav>
+
+<!-- HOME -->
+<div id="page-home" class="page active">
+  <div class="container">
+    <div class="hero">
+      <div class="hero-stamp">Managed Freelance Escrow Platform</div>
+      <h1>Work gets done.<br><em>Everyone gets paid.</em></h1>
+      <p>LockWork solves the freelancer dropout problem — milestone escrow, verified freelancers, auto-replacement, and legal contracts baked in.</p>
+      <div class="hero-actions">
+        <button class="btn btn-amber" onclick="showPage('auth')">Get Started Free</button>
+        <button class="btn btn-outline" onclick="showPage('how')">See How It Works</button>
+      </div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-n" id="statProjects">0</div><div class="stat-l">Active Projects</div></div>
+      <div class="stat"><div class="stat-n" id="statEscrow">$0</div><div class="stat-l">Funds in Escrow</div></div>
+      <div class="stat"><div class="stat-n" id="statCompleted">0</div><div class="stat-l">Milestones Completed</div></div>
+      <div class="stat"><div class="stat-n" id="statFreelancers">0</div><div class="stat-l">Verified Freelancers</div></div>
+    </div>
+
+    <!-- FEATURES -->
+    <div style="padding:48px 0;">
+      <div class="section-label">Platform Features</div>
+      <h2 class="section-h2">Everything you need for safe hiring</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">💰</div>
+          <h3>Full Payment Escrow</h3>
+          <p>Client deposits full amount. Released only after milestone approval. Zero risk of payment disputes.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Milestone System</h3>
+          <p>Projects divided into phases. Pay step-by-step. No large upfront risk for either party.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🪪</div>
+          <h3>Verified Freelancers</h3>
+          <p>ID verification + skill tests + reliability score. Only trusted professionals get hired.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💬</div>
+          <h3>Built-in Project Tracking</h3>
+          <p>Chat, file uploads, deadlines — all inside the platform. Progress is always recorded.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔁</div>
+          <h3>Auto-Replacement</h3>
+          <p>If freelancer disappears, a new one is assigned instantly. Work continues from last progress.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚖️</div>
+          <h3>Legal + Dispute System</h3>
+          <p>Digital contracts before starting. Platform mediates disputes. Clear rules for everyone.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🛡️</div>
+          <h3>Completion Guarantee</h3>
+          <p>Premium option — if project fails, we refund or complete it internally. Total peace of mind.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📈</div>
+          <h3>Reliability Score</h3>
+          <p>Freelancers ranked by completion rate, not just reviews. Real performance data.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRICING -->
+    <div style="padding:0 0 80px;">
+      <div class="section-label">Revenue Model</div>
+      <h2 class="section-h2">Simple, transparent pricing</h2>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div class="pricing-label">Platform Fee</div>
+          <div class="pricing-amount">10%</div>
+          <div class="pricing-desc">Per project commission. Charged on project value. Covers escrow, support, and dispute resolution.</div>
+        </div>
+        <div class="pricing-card">
+          <div class="pricing-label">Completion Guarantee</div>
+          <div class="pricing-amount">+5%</div>
+          <div class="pricing-desc">Optional add-on. If project fails, you get a refund or free replacement. Full peace of mind.</div>
+        </div>
+        <div class="pricing-card pricing-highlight">
+          <div class="pricing-label">Freelancer Premium</div>
+          <div class="pricing-amount">$29/mo</div>
+          <div class="pricing-desc">Priority listing, verified badge, reduced commission, access to premium projects.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div id="page-how" class="page">
+  <div class="container">
+    <div style="padding:48px 0 80px;">
+      <div class="section-label">Step by Step</div>
+      <h2 class="section-h2">How LockWork protects both sides</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">STEP 01</div><h3>Post a Project</h3><p>Define scope, break into milestones, set budget. Optionally add Completion Guarantee.</p></div>
+        <div class="step"><div class="step-num">STEP 02</div><h3>Funds Locked</h3><p>Full budget locked in escrow. Freelancer sees it's real. Client knows it's protected.</p></div>
+        <div class="step"><div class="step-num">STEP 03</div><h3>Verified Freelancer Accepts</h3><p>ID-verified, skill-tested freelancers review and sign the digital contract.</p></div>
+        <div class="step"><div class="step-num">STEP 04</div><h3>Work + Track</h3><p>Freelancer submits files per milestone. Chat tracked inside platform. Full audit trail.</p></div>
+        <div class="step"><div class="step-num">STEP 05</div><h3>Approve & Pay</h3><p>Client approves each milestone. Funds released automatically. IP transfers on completion.</p></div>
+        <div class="step"><div class="step-num">STEP 06</div><h3>If Something Goes Wrong</h3><p>Raise a dispute. Platform mediates in 48h. Auto-replacement triggered if needed.</p></div>
+      </div>
+      <div style="text-align:center;margin-top:40px;"><button class="btn btn-amber" onclick="showPage('auth')">Start a Project Now</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- FREELANCERS DIRECTORY -->
+<div id="page-freelancers" class="page">
+  <div class="container">
+    <div style="padding:48px 0 80px;">
+      <div class="page-header">
+        <div><h2>Find Freelancers</h2><p class="text-muted">Verified, skill-tested professionals ranked by reliability</p></div>
+        <input type="text" id="freelancerSearch" placeholder="Search by skill..." style="max-width:260px;" oninput="filterFreelancers(this.value)">
+      </div>
+      <div id="freelancerList"><div class="empty-state"><div>Loading...</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div id="page-auth" class="page">
+  <div class="container">
+    <div class="auth-box animate-in">
+      <div class="logo" style="font-size:1.6rem;margin-bottom:32px;display:block;">Lock<span style="color:var(--text)">Work</span></div>
+      <div id="authAlert"></div>
+      <div id="loginForm">
+        <div class="section-label">Sign In</div>
+        <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="you@company.com" onkeydown="if(event.key==='Enter')login()"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"></div>
+        <button class="btn btn-amber w-full" onclick="login()">Sign In →</button>
+        <div class="auth-toggle">No account? <a onclick="toggleAuth('register')">Create one</a></div>
+        <div class="auth-toggle" style="margin-top:12px;">
+          <a onclick="demoLogin('business')">⚡ Demo as Business</a> &nbsp;|&nbsp; <a onclick="demoLogin('freelancer')">⚡ Demo as Freelancer</a>
+        </div>
+      </div>
+      <div id="registerForm" style="display:none;">
+        <div class="section-label">Create Account</div>
+        <div class="form-group"><label>Full Name</label><input type="text" id="regName" placeholder="Alex Johnson"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="you@company.com"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="regPass" placeholder="Choose a password"></div>
+        <div class="form-group">
+          <label>I am a...</label>
+          <div class="role-cards">
+            <div class="role-card selected" id="roleClient" onclick="selectRole('client')"><div class="role-icon">🏢</div><div class="role-name">Business / Client</div><div class="role-desc">I hire freelancers</div></div>
+            <div class="role-card" id="roleFreelancer" onclick="selectRole('freelancer')"><div class="role-icon">👤</div><div class="role-name">Freelancer</div><div class="role-desc">I do the work</div></div>
+          </div>
+        </div>
+        <button class="btn btn-amber w-full" onclick="register()">Create Account →</button>
+        <div class="auth-toggle">Already have an account? <a onclick="toggleAuth('login')">Sign in</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page">
+  <div class="container">
+    <div class="page-header">
+      <div><h2 id="dashTitle">Dashboard</h2><p id="dashSubtitle" class="text-muted"></p></div>
+      <div id="dashActions" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="tabs" id="dashTabs"></div>
+    <div id="tabContent"></div>
+  </div>
+</div>
+
+<!-- NEW PROJECT -->
+<div id="page-newproject" class="page">
+  <div class="container">
+    <div style="padding:40px 0 80px;max-width:720px;">
+      <div class="page-header">
+        <div><h2>Post a Project</h2><p class="text-muted">Define scope, milestones, and lock funds in escrow</p></div>
+        <button class="btn btn-outline btn-sm" onclick="showPage('dashboard')">← Back</button>
+      </div>
+      <div id="newProjectAlert"></div>
+      <div class="card">
+        <div class="section-label" style="margin-bottom:20px;">Project Details</div>
+        <div class="form-group"><label>Project Title</label><input type="text" id="projTitle" placeholder="e.g. E-commerce Website Redesign"></div>
+        <div class="form-group"><label>Description & Deliverables</label><textarea id="projDesc" rows="4" placeholder="Describe scope, tech stack, deliverables..."></textarea></div>
+        <div class="form-row">
+          <div class="form-group"><label>Assign to Freelancer <span class="text-muted">(optional email)</span></label><input type="email" id="projFreelancer" placeholder="or leave blank for open listing"></div>
+          <div class="form-group"><label>Project Deadline</label><input type="date" id="projDeadline"></div>
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;letter-spacing:0;">
+            <input type="checkbox" id="guaranteeCheck" style="width:auto;accent-color:var(--amber)">
+            <span>🛡️ Add Completion Guarantee (+5% fee) — Get refund or free replacement if project fails</span>
+          </label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="flex justify-between items-center" style="margin-bottom:20px;">
+          <div class="section-label" style="margin-bottom:0;">Milestones & Escrow</div>
+          <button class="btn btn-outline btn-sm" onclick="addMilestone()">+ Add Milestone</button>
+        </div>
+        <div id="milestoneInputs"></div>
+        <div class="escrow-box" style="margin-top:20px;">
+          <div class="flex justify-between items-center flex-wrap gap-12">
+            <div>
+              <div class="escrow-amount" id="totalAmount">$0.00</div>
+              <div class="escrow-meta" id="feeBreakdown">Including 10% platform fee</div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--muted);text-align:right;">Funds held securely<br>Released per milestone</div>
+          </div>
+        </div>
+      </div>
+      <div id="balanceWarning" style="display:none;" class="alert alert-err">Insufficient balance. <a onclick="openModal('topupModal')" style="color:var(--amber);cursor:pointer;">Add funds →</a></div>
+      <button class="btn btn-amber" style="width:100%;padding:14px;" onclick="createProject()">🔒 Lock Funds & Post Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECT DETAIL -->
+<div id="page-project" class="page">
+  <div class="container"><div style="padding:40px 0 80px;"><div id="projectDetailContent"></div></div></div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
